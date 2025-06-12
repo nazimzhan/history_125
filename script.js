@@ -8,6 +8,7 @@ const quizData = [
     {
         question: "Каменный век начался:",
         options: [
+		"2.5 млн лет назад",
             "3.5 млн лет назад",
             "4. 5млн лет назад",
             "6.5 млн лет назад",
@@ -457,8 +458,14 @@ const quizData = [
         ],
         correctAnswer: 1
     },
-    {
+	{
         question: "28",
+        options: [
+        ],
+        correctAnswer: null
+    },
+    {
+        question: "Особый памятник эпохи энеолита в Северном Казахстане:",
         options: [
             "Ботай",
             "Пеньки",
