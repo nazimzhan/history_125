@@ -2123,7 +2123,6 @@ const quizData = [
 // Настройки теста
 let currentQuestionIndex = 0;
 let score = 0;
-let flaggedQuestions = new Set();
 let timeLeft = 9000; // 150 минут в секундах
 let timer;
 let answerSelected = false;
@@ -2167,30 +2166,7 @@ function showQuestion() {
             </label>
         `).join('')}
     `;
-    updateFlagButton();
     document.getElementById('next-btn').disabled = true;
-}
-
-function updateFlagButton() {
-    const flagBtn = document.getElementById('flag-btn');
-    const currentOriginalIndex = getOriginalIndex(currentQuestionIndex);
-    
-    if (flaggedQuestions.has(currentOriginalIndex)) {
-        flagBtn.innerHTML = "⚑ Убрать метку";
-        flagBtn.style.backgroundColor = "#F57C00";
-    } else {
-        flagBtn.innerHTML = "⚑ Пометить";
-        flagBtn.style.backgroundColor = "#FF9800";
-    }
-    document.getElementById('flagged-count').textContent = flaggedQuestions.size;
-}
-
-function getOriginalIndex(filteredIndex) {
-    const currentQuestion = filteredQuizData[filteredIndex];
-    return quizData.findIndex(item => 
-        item.question === currentQuestion.question && 
-        item.options.length > 0
-    );
 }
 
 function startTimer() {
@@ -2240,20 +2216,11 @@ function endQuiz() {
     document.getElementById('question-container').innerHTML = `
         <h2>Тест завершён!</h2>
         <p>Ваш результат: <strong>${score}</strong> из <strong>${filteredQuizData.length}</strong></p>
-        <p>Помечено вопросов: <strong>${flaggedQuestions.size}</strong></p>
     `;
     document.querySelector('.controls').style.display = 'none';
 }
 
 // Обработчики событий
-document.getElementById('flag-btn').addEventListener('click', () => {
-    const originalIndex = getOriginalIndex(currentQuestionIndex);
-    flaggedQuestions.has(originalIndex) 
-        ? flaggedQuestions.delete(originalIndex) 
-        : flaggedQuestions.add(originalIndex);
-    updateFlagButton();
-});
-
 document.getElementById('skip-btn').addEventListener('click', () => {
     if (currentQuestionIndex < filteredQuizData.length - 1) {
         currentQuestionIndex++;
