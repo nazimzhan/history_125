@@ -8490,7 +8490,7 @@ const quizData = [
         ],
         correctAnswer: 3
     }
-
+     
 ];
 
 let currentQuestionIndex = 0;
@@ -8498,26 +8498,25 @@ let score = 0;
 let filteredQuizData = [];
 let timer;
 let answerSelected = false;
+let selectedAnswerIndex = null;
 
-// Элементы интерфейса
 const startScreen = document.getElementById('start-screen');
 const quizScreen = document.getElementById('quiz-screen');
 const questionContainer = document.getElementById('question-container');
 const nextBtn = document.getElementById('next-btn');
 
-// Обработчики выбора количества вопросов
+// Обработчики кнопок старта
 document.querySelectorAll('.options button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const count = btn.dataset.count;
-        startTest(count);
-    });
+    btn.addEventListener('click', () => startTest(btn.dataset.count));
+});
+
+document.querySelectorAll('.block-options button').forEach(btn => {
+    btn.addEventListener('click', () => startBlockTest(parseInt(btn.dataset.block)));
 });
 
 function startTest(count) {
-    // Фильтруем вопросы с вариантами ответов
     const availableQuestions = quizData.filter(q => q.options.length > 0);
     
-    // Выбираем нужное количество
     if (count === 'all') {
         filteredQuizData = shuffleArray([...availableQuestions]);
     } else {
@@ -8525,39 +8524,42 @@ function startTest(count) {
         filteredQuizData = shuffleArray([...availableQuestions]).slice(0, num);
     }
     
-    // Настраиваем интерфейс
+    startQuiz();
+}
+
+function startBlockTest(block) {
+    const availableQuestions = quizData.filter(q => q.options.length > 0);
+    const startIndex = (block - 1) * 100;
+    const endIndex = block * 100;
+    filteredQuizData = availableQuestions.slice(startIndex, endIndex);
+    
+    if (filteredQuizData.length === 0) {
+        alert('В этом блоке нет вопросов!');
+        return;
+    }
+    
+    startQuiz();
+}
+
+function startQuiz() {
+    currentQuestionIndex = 0;
+    score = 0;
+    document.getElementById('score').textContent = score;
     document.getElementById('total').textContent = filteredQuizData.length;
     startScreen.style.display = 'none';
     quizScreen.style.display = 'block';
-    
-    // Показываем первый вопрос
     showQuestion();
     startTimer();
 }
 
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
 function showQuestion() {
     answerSelected = false;
-    const currentQuestion = filteredQuizData[currentQuestionIndex];
-    
-    // Находим номер вопроса из оригинального массива
-    const originalIndex = quizData.findIndex(item => 
-        item.question === currentQuestion.question && 
-        item.options.length > 0
-    );
-    const questionNumber = quizData[originalIndex - 1]?.question || "1";
+    selectedAnswerIndex = null;
+    const question = filteredQuizData[currentQuestionIndex];
     
     questionContainer.innerHTML = `
-        <div class="question-number">Вопрос ${questionNumber}</div>
-        <div class="question-text">${currentQuestion.question}</div>
-        ${currentQuestion.options.map((option, index) => `
+        <div class="question-text">${question.question}</div>
+        ${question.options.map((option, index) => `
             <label class="answer">
                 <input type="radio" name="answer" value="${index}">
                 ${option}
@@ -8565,12 +8567,72 @@ function showQuestion() {
         `).join('')}
     `;
     
+    // Обработчик клика по ответу
+    document.querySelectorAll('.answer').forEach((answer, index) => {
+        answer.addEventListener('click', () => {
+            if (answerSelected) return; // Если ответ уже выбран, не реагируем
+            
+            // Снимаем выделение со всех ответов
+            document.querySelectorAll('.answer').forEach(a => {
+                a.classList.remove('selected');
+            });
+            
+            // Выделяем выбранный ответ
+            answer.classList.add('selected');
+            selectedAnswerIndex = index;
+            nextBtn.disabled = false;
+        });
+    });
+    
     document.getElementById('current').textContent = currentQuestionIndex + 1;
     nextBtn.disabled = true;
     nextBtn.textContent = 'Далее';
 }
 
+function checkAnswer(selectedIndex) {
+    answerSelected = true;
+    const question = filteredQuizData[currentQuestionIndex];
+    const answers = document.querySelectorAll('.answer');
+    
+    answers.forEach((answer, index) => {
+        const radio = answer.querySelector('input');
+        radio.disabled = true;
+        
+        if (index === question.correctAnswer) {
+            answer.classList.add('correct');
+        } else if (index === selectedIndex) {
+            answer.classList.add('incorrect');
+        }
+    });
+    
+    if (selectedIndex === question.correctAnswer) {
+        score++;
+        document.getElementById('score').textContent = score;
+    }
+    
+    nextBtn.disabled = false;
+    nextBtn.textContent = currentQuestionIndex < filteredQuizData.length - 1 ? 'Следующий' : 'Завершить';
+}
+
+function endTest() {
+    clearInterval(timer);
+    questionContainer.innerHTML = `
+        <h2>Тест завершён!</h2>
+        <p>Правильных ответов: ${score} из ${filteredQuizData.length}</p>
+        <p>Время: ${document.getElementById('time').textContent}</p>
+        <button id="restart-btn">Начать заново</button>
+    `;
+    nextBtn.style.display = 'none';
+    
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        quizScreen.style.display = 'none';
+        startScreen.style.display = 'block';
+        nextBtn.style.display = 'block';
+    });
+}
+
 function startTimer() {
+    clearInterval(timer);
     let seconds = 0;
     timer = setInterval(() => {
         seconds++;
@@ -8582,15 +8644,22 @@ function startTimer() {
     }, 1000);
 }
 
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Обработчик кнопки "Далее"
 nextBtn.addEventListener('click', () => {
     if (!answerSelected) {
-        const selected = document.querySelector('input[name="answer"]:checked');
-        if (!selected) {
+        if (selectedAnswerIndex === null) {
             alert('Пожалуйста, выберите ответ!');
             return;
         }
-        checkAnswer(parseInt(selected.value));
-        nextBtn.textContent = currentQuestionIndex < filteredQuizData.length - 1 ? 'Следующий' : 'Завершить';
+        checkAnswer(selectedAnswerIndex);
     } else {
         if (currentQuestionIndex < filteredQuizData.length - 1) {
             currentQuestionIndex++;
@@ -8598,46 +8667,5 @@ nextBtn.addEventListener('click', () => {
         } else {
             endTest();
         }
-    }
-});
-
-function checkAnswer(selectedIndex) {
-    answerSelected = true;
-    const currentQuestion = filteredQuizData[currentQuestionIndex];
-    const answers = document.querySelectorAll('.answer');
-    
-    answers.forEach((answer, index) => {
-        const radio = answer.querySelector('input');
-        radio.disabled = true;
-        
-        if (index === currentQuestion.correctAnswer) {
-            answer.classList.add('correct');
-        } else if (index === selectedIndex) {
-            answer.classList.add('incorrect');
-        }
-    });
-    
-    if (selectedIndex === currentQuestion.correctAnswer) {
-        score++;
-        document.getElementById('score').textContent = score;
-    }
-    
-    nextBtn.disabled = false;
-}
-
-function endTest() {
-    clearInterval(timer);
-    questionContainer.innerHTML = `
-        <h2>Тест завершён!</h2>
-        <p>Правильных ответов: <strong>${score}</strong> из <strong>${filteredQuizData.length}</strong></p>
-        <p>Затраченное время: <strong>${document.getElementById('time').textContent}</strong></p>
-    `;
-    nextBtn.style.display = 'none';
-}
-
-// Обработчик выбора ответа
-document.addEventListener('change', (e) => {
-    if (e.target.name === 'answer') {
-        nextBtn.disabled = false;
     }
 });
